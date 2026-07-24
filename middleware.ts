@@ -6,19 +6,21 @@ import { getRoleHomePath, type AuthRole } from "@/lib/auth-routes";
 type CheckAuthResponse = {
   status: boolean;
   message: string;
-  data: {
-    role: AuthRole;
-  } | null;
+  data: AuthRole | null;
 };
 
 const apiUrl =
-  process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+  process.env.API_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:3000";
 
-const authPrefix = "/auth";
 const protectedPrefixes = ["/admin", "/staff", "/mutations", "/settings"];
 
 function isProtectedPath(pathname: string) {
-  return pathname === "/" || protectedPrefixes.some((path) => pathname.startsWith(path));
+  return (
+    pathname === "/" ||
+    protectedPrefixes.some((path) => pathname.startsWith(path))
+  );
 }
 
 function expectedRole(pathname: string): AuthRole | null {
@@ -29,6 +31,10 @@ function expectedRole(pathname: string): AuthRole | null {
   return null;
 }
 
+function isAuthRole(role: string | null | undefined): role is AuthRole {
+  return role === "admin" || role === "staff" || role === "customer";
+}
+
 async function checkAuth(token: string) {
   const response = await fetch(`${apiUrl}/api/check-auth`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -37,46 +43,42 @@ async function checkAuth(token: string) {
 
   if (!response.ok) return { isAuth: false, role: null };
 
-  const body = (await response.json().catch(() => null)) as CheckAuthResponse | null;
-  const isAuth = body?.status === true;
+  const body = (await response
+    .json()
+    .catch(() => null)) as CheckAuthResponse | null;
+  const role = body?.data ?? null;
+  const isAuth = body?.status === true && isAuthRole(role);
 
   return {
     isAuth,
-    role: isAuth ? (body?.data?.role ?? null) : null,
+    role: isAuth ? role : null,
   };
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const isAuthPage = pathname.startsWith(authPrefix);
-  const shouldProtect = isProtectedPath(pathname);
 
-  if (!isAuthPage && !shouldProtect) {
+  if (!isProtectedPath(pathname)) {
     return NextResponse.next();
   }
 
   const token = request.cookies.get("accessToken")?.value;
 
   if (!token) {
-    if (isAuthPage) return NextResponse.next();
-
     return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 
   const { isAuth, role } = await checkAuth(token);
 
   if (!isAuth || !role) {
-    const response = isAuthPage
-      ? NextResponse.next()
-      : NextResponse.redirect(new URL("/auth/login", request.url));
-
+    const response = NextResponse.redirect(new URL("/auth/login", request.url));
     response.cookies.delete("accessToken");
     return response;
   }
 
   const roleHome = getRoleHomePath(role);
 
-  if (isAuthPage || pathname === "/") {
+  if (pathname === "/") {
     return NextResponse.redirect(new URL(roleHome, request.url));
   }
 
@@ -90,5 +92,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/admin/:path*", "/staff/:path*", "/mutations/:path*", "/settings", "/auth/:path*"],
+  matcher: [
+    "/",
+    "/admin/:path*",
+    "/staff/:path*",
+    "/mutations/:path*",
+    "/settings",
+  ],
 };

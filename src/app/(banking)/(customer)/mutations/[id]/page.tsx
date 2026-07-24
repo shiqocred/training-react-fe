@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { requireAuth } from "@/lib/auth";
+
 import { CustomerMutationDetailClient } from "./_components/client";
 
 export const metadata: Metadata = {
@@ -11,6 +13,7 @@ export default async function CustomerMutationDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAuth(["customer"]);
   const { id } = await params;
 
   return <CustomerMutationDetailClient id={id} />;

@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 
+import { requireAuth } from "@/lib/auth";
+
 import { StaffMutationsClient } from "./_components/client";
 
 export const metadata: Metadata = {
-  title: "Aktivitas Buku Besar Cabang",
+  title: "Mutasi Staff",
 };
 
-export default function StaffMutationsPage() {
+export default async function StaffMutationsPage() {
+  await requireAuth(["staff"]);
+
   return <StaffMutationsClient />;
 }
