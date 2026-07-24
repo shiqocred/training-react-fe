@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function BankingLoadingState() {
   return (
@@ -22,5 +22,5 @@ export function BankingLoadingState() {
         </div>
       </div>
     </main>
-  )
+  );
 }
